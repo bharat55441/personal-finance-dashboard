@@ -1,21 +1,14 @@
-import { useEffect } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router'
+import { lazy, useEffect } from 'react'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { ErrorToast } from './components/ErrorToast'
-import { Layout, PageHeader } from './components/Layout'
-import { EmptyState } from './components/ui'
+import { Layout } from './components/Layout'
 import { useApplyTheme } from './hooks/useTheme'
 import { Login } from './pages/Login'
 import { useFinanceStore } from './store/useFinanceStore'
 
-function Home() {
-  const user = useFinanceStore((s) => s.user)
-  return (
-    <>
-      <PageHeader title={`Welcome, ${user?.name ?? ''}`} />
-      <EmptyState title="Nothing here yet">Transactions, budgets and savings goals will appear here.</EmptyState>
-    </>
-  )
-}
+// Route-level code splitting: each page is loaded on demand.
+const Transactions = lazy(() => import('./pages/Transactions').then((m) => ({ default: m.Transactions })))
+const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })))
 
 function App() {
   useApplyTheme()
@@ -35,8 +28,10 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="*" element={<Home />} />
+          <Route index element={<Navigate to="/transactions" replace />} />
+          <Route path="transactions" element={<Transactions />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="*" element={<Navigate to="/transactions" replace />} />
         </Route>
       </Routes>
       <ErrorToast />

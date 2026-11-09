@@ -1,12 +1,18 @@
+import { format } from 'date-fns'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { api, ApiError } from '../api/client'
+import type { Transaction, TransactionInput } from '../types/Transaction'
 import type { User } from '../types/User'
 
 export type Theme = 'light' | 'dark'
 export type Status = 'loading' | 'anonymous' | 'ready'
 
-interface FinanceState {
+interface FinanceData {
+  transactions: Transaction[]
+}
+
+interface FinanceState extends FinanceData {
   status: Status
   user: User | null
   currency: string
@@ -19,16 +25,30 @@ interface FinanceState {
   register: (name: string, email: string, password: string) => Promise<void>
   logout: () => Promise<void>
 
+  addTransaction: (t: TransactionInput) => Promise<void>
+  updateTransaction: (id: string, t: TransactionInput) => Promise<void>
+  deleteTransaction: (id: string) => Promise<void>
+  importTransactions: (ts: TransactionInput[]) => Promise<number>
+
   toggleTheme: () => void
+  setCurrency: (c: string) => Promise<void>
+  clearAll: () => Promise<void>
   dismissError: () => void
 }
+
+const empty: FinanceData = { transactions: [] }
+
+/** The user's local date, so the server generates recurring items in the right month. */
+const today = () => format(new Date(), 'yyyy-MM-dd')
 
 const prefersDark = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches
 
+const byId = <T extends { id: string }>(list: T[], item: T) => list.map((x) => (x.id === item.id ? item : x))
+
 export const useFinanceStore = create<FinanceState>()(
   persist(
-    (set) => {
+    (set, get) => {
       /** Run a request; on failure record the error (and sign out on 401) instead of throwing. */
       async function run<T>(fn: () => Promise<T>, rollback?: () => void): Promise<T | undefined> {
         try {
@@ -36,7 +56,7 @@ export const useFinanceStore = create<FinanceState>()(
         } catch (err) {
           rollback?.()
           if (err instanceof ApiError && err.status === 401) {
-            set({ status: 'anonymous', user: null, error: 'Your session expired. Please sign in again.' })
+            set({ ...empty, status: 'anonymous', user: null, error: 'Your session expired. Please sign in again.' })
           } else {
             set({ error: err instanceof Error ? err.message : 'Something went wrong' })
           }
@@ -45,11 +65,12 @@ export const useFinanceStore = create<FinanceState>()(
       }
 
       async function load() {
-        const { user } = await api<{ user: User }>('/auth/me')
-        set({ user, currency: user.settings.currency, status: 'ready', error: null })
+        const data = await api<FinanceData & { user: User }>(`/data?today=${today()}`)
+        set({ ...data, currency: data.user.settings.currency, status: 'ready', error: null })
       }
 
       return {
+        ...empty,
         status: 'loading',
         user: null,
         currency: 'USD',
@@ -77,10 +98,40 @@ export const useFinanceStore = create<FinanceState>()(
         },
         logout: async () => {
           await run(() => api('/auth/logout', 'POST'))
-          set({ status: 'anonymous', user: null })
+          set({ ...empty, status: 'anonymous', user: null })
+        },
+
+        addTransaction: async (t) => {
+          const res = await run(() => api<{ transaction: Transaction }>('/transactions', 'POST', t))
+          if (res) set((s) => ({ transactions: [res.transaction, ...s.transactions] }))
+        },
+        updateTransaction: async (id, t) => {
+          const res = await run(() => api<{ transaction: Transaction }>(`/transactions/${id}`, 'PUT', t))
+          if (res) set((s) => ({ transactions: byId(s.transactions, res.transaction) }))
+        },
+        deleteTransaction: async (id) => {
+          const prev = get().transactions
+          set({ transactions: prev.filter((x) => x.id !== id) })
+          await run(() => api(`/transactions/${id}`, 'DELETE'), () => set({ transactions: prev }))
+        },
+        importTransactions: async (ts) => {
+          const res = await run(() => api<{ transactions: Transaction[] }>('/transactions/bulk', 'POST', { transactions: ts }))
+          if (!res) return 0
+          set((s) => ({ transactions: [...res.transactions, ...s.transactions] }))
+          return res.transactions.length
         },
 
         toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
+        setCurrency: async (currency) => {
+          const prev = get().currency
+          set({ currency })
+          const res = await run(() => api<{ user: User }>('/settings', 'PATCH', { currency }), () => set({ currency: prev }))
+          if (res) set({ user: res.user })
+        },
+        clearAll: async () => {
+          const res = await run(() => api('/data', 'DELETE').then(() => true))
+          if (res) set(empty)
+        },
         dismissError: () => set({ error: null }),
       }
     },
