@@ -4,6 +4,7 @@ import { useFinanceStore } from '../store/useFinanceStore'
 import { cx, Icon, type IconName } from './ui'
 
 const NAV: { to: string; label: string; icon: IconName }[] = [
+  { to: '/', label: 'Dashboard', icon: 'dashboard' },
   { to: '/transactions', label: 'Transactions', icon: 'list' },
   { to: '/recurring', label: 'Recurring', icon: 'repeat' },
   { to: '/budgets', label: 'Budgets', icon: 'pie' },

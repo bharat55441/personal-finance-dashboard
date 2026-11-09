@@ -16,6 +16,9 @@ interface FinanceData {
   goals: SavingsGoal[]
 }
 
+/** Shape accepted by POST /api/data/import (sample data, localStorage migration). */
+export type ImportPayload = FinanceData
+
 interface FinanceState extends FinanceData {
   status: Status
   user: User | null
@@ -50,6 +53,7 @@ interface FinanceState extends FinanceData {
 
   toggleTheme: () => void
   setCurrency: (c: string) => Promise<void>
+  importData: (data: ImportPayload, replace: boolean) => Promise<void>
   clearAll: () => Promise<void>
   dismissError: () => void
 }
@@ -203,6 +207,19 @@ export const useFinanceStore = create<FinanceState>()(
           set({ currency })
           const res = await run(() => api<{ user: User }>('/settings', 'PATCH', { currency }), () => set({ currency: prev }))
           if (res) set({ user: res.user })
+        },
+        importData: async (data, replace) => {
+          const res = await run(() =>
+            api<FinanceData & { user: User }>('/data/import', 'POST', {
+              replace,
+              // Strip client-only fields the server doesn't accept.
+              transactions: data.transactions.map(({ id: _id, ...t }) => t),
+              budgets: data.budgets.map(({ category, limit }) => ({ category, limit })),
+              recurring: data.recurring,
+              goals: data.goals.map(({ id: _id, ...g }) => g),
+            }),
+          )
+          if (res) set({ ...res, currency: res.user.settings.currency })
         },
         clearAll: async () => {
           const res = await run(() => api('/data', 'DELETE').then(() => true))
