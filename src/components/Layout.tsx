@@ -4,7 +4,8 @@ import { useFinanceStore } from '../store/useFinanceStore'
 import { cx, Icon, type IconName } from './ui'
 
 const NAV: { to: string; label: string; icon: IconName }[] = [
-  { to: '/', label: 'Home', icon: 'dashboard' },
+  { to: '/transactions', label: 'Transactions', icon: 'list' },
+  { to: '/settings', label: 'Settings', icon: 'settings' },
 ]
 
 export function Layout() {
