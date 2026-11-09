@@ -11,6 +11,7 @@ import { useFinanceStore } from './store/useFinanceStore'
 const Transactions = lazy(() => import('./pages/Transactions').then((m) => ({ default: m.Transactions })))
 const Recurring = lazy(() => import('./pages/Recurring').then((m) => ({ default: m.Recurring })))
 const Budgets = lazy(() => import('./pages/Budgets').then((m) => ({ default: m.Budgets })))
+const Goals = lazy(() => import('./pages/Goals').then((m) => ({ default: m.Goals })))
 const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })))
 
 function App() {
@@ -36,6 +37,7 @@ function App() {
           <Route path="transactions" element={<Transactions />} />
           <Route path="recurring" element={<Recurring />} />
           <Route path="budgets" element={<Budgets />} />
+          <Route path="goals" element={<Goals />} />
           <Route path="settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/transactions" replace />} />
         </Route>

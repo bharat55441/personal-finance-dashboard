@@ -2,7 +2,7 @@ import { format } from 'date-fns'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { api, ApiError } from '../api/client'
-import type { Budget } from '../types/Budget'
+import type { Budget, SavingsGoal } from '../types/Budget'
 import type { RecurringInput, RecurringRule, Transaction, TransactionInput } from '../types/Transaction'
 import type { User } from '../types/User'
 
@@ -13,6 +13,7 @@ interface FinanceData {
   transactions: Transaction[]
   budgets: Budget[]
   recurring: RecurringRule[]
+  goals: SavingsGoal[]
 }
 
 interface FinanceState extends FinanceData {
@@ -42,13 +43,18 @@ interface FinanceState extends FinanceData {
   /** Ask the server to generate any recurring transactions that have come due. */
   syncRecurring: () => Promise<number>
 
+  addGoal: (g: Omit<SavingsGoal, 'id'>) => Promise<void>
+  updateGoal: (id: string, g: Partial<Omit<SavingsGoal, 'id'>>) => Promise<void>
+  contributeToGoal: (id: string, amount: number) => Promise<void>
+  deleteGoal: (id: string) => Promise<void>
+
   toggleTheme: () => void
   setCurrency: (c: string) => Promise<void>
   clearAll: () => Promise<void>
   dismissError: () => void
 }
 
-const empty: FinanceData = { transactions: [], budgets: [], recurring: [] }
+const empty: FinanceData = { transactions: [], budgets: [], recurring: [], goals: [] }
 
 /** The user's local date, so the server generates recurring items in the right month. */
 const today = () => format(new Date(), 'yyyy-MM-dd')
@@ -171,6 +177,24 @@ export const useFinanceStore = create<FinanceState>()(
           if (!res?.transactions.length) return 0
           set((s) => ({ transactions: [...res.transactions, ...s.transactions], recurring: res.recurring ?? s.recurring }))
           return res.transactions.length
+        },
+
+        addGoal: async (g) => {
+          const res = await run(() => api<{ goal: SavingsGoal }>('/goals', 'POST', g))
+          if (res) set((s) => ({ goals: [...s.goals, res.goal] }))
+        },
+        updateGoal: async (id, g) => {
+          const res = await run(() => api<{ goal: SavingsGoal }>(`/goals/${id}`, 'PATCH', { ...g, deadline: g.deadline ?? '' }))
+          if (res) set((s) => ({ goals: byId(s.goals, res.goal) }))
+        },
+        contributeToGoal: async (id, amount) => {
+          const res = await run(() => api<{ goal: SavingsGoal }>(`/goals/${id}/contribute`, 'POST', { amount }))
+          if (res) set((s) => ({ goals: byId(s.goals, res.goal) }))
+        },
+        deleteGoal: async (id) => {
+          const prev = get().goals
+          set({ goals: prev.filter((g) => g.id !== id) })
+          await run(() => api(`/goals/${id}`, 'DELETE'), () => set({ goals: prev }))
         },
 
         toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),

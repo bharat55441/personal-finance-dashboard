@@ -5,3 +5,12 @@ export interface Budget {
   /** Monthly limit */
   limit: number
 }
+
+export interface SavingsGoal {
+  id: string
+  name: string
+  target: number
+  saved: number
+  /** Optional ISO date, yyyy-MM-dd */
+  deadline?: string
+}

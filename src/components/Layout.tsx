@@ -7,6 +7,7 @@ const NAV: { to: string; label: string; icon: IconName }[] = [
   { to: '/transactions', label: 'Transactions', icon: 'list' },
   { to: '/recurring', label: 'Recurring', icon: 'repeat' },
   { to: '/budgets', label: 'Budgets', icon: 'pie' },
+  { to: '/goals', label: 'Savings Goals', icon: 'target' },
   { to: '/settings', label: 'Settings', icon: 'settings' },
 ]
 
