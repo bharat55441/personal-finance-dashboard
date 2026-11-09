@@ -2,7 +2,7 @@ import { format } from 'date-fns'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { api, ApiError } from '../api/client'
-import type { Transaction, TransactionInput } from '../types/Transaction'
+import type { RecurringInput, RecurringRule, Transaction, TransactionInput } from '../types/Transaction'
 import type { User } from '../types/User'
 
 export type Theme = 'light' | 'dark'
@@ -10,6 +10,7 @@ export type Status = 'loading' | 'anonymous' | 'ready'
 
 interface FinanceData {
   transactions: Transaction[]
+  recurring: RecurringRule[]
 }
 
 interface FinanceState extends FinanceData {
@@ -30,13 +31,19 @@ interface FinanceState extends FinanceData {
   deleteTransaction: (id: string) => Promise<void>
   importTransactions: (ts: TransactionInput[]) => Promise<number>
 
+  addRecurring: (r: RecurringInput) => Promise<void>
+  updateRecurring: (id: string, r: Partial<RecurringInput>) => Promise<void>
+  deleteRecurring: (id: string) => Promise<void>
+  /** Ask the server to generate any recurring transactions that have come due. */
+  syncRecurring: () => Promise<number>
+
   toggleTheme: () => void
   setCurrency: (c: string) => Promise<void>
   clearAll: () => Promise<void>
   dismissError: () => void
 }
 
-const empty: FinanceData = { transactions: [] }
+const empty: FinanceData = { transactions: [], recurring: [] }
 
 /** The user's local date, so the server generates recurring items in the right month. */
 const today = () => format(new Date(), 'yyyy-MM-dd')
@@ -118,6 +125,33 @@ export const useFinanceStore = create<FinanceState>()(
           const res = await run(() => api<{ transactions: Transaction[] }>('/transactions/bulk', 'POST', { transactions: ts }))
           if (!res) return 0
           set((s) => ({ transactions: [...res.transactions, ...s.transactions] }))
+          return res.transactions.length
+        },
+
+        addRecurring: async (r) => {
+          const res = await run(() =>
+            api<{ recurring: RecurringRule[]; transactions: Transaction[] }>('/recurring', 'POST', { ...r, today: today() }),
+          )
+          if (res) set((s) => ({ recurring: res.recurring, transactions: [...res.transactions, ...s.transactions] }))
+        },
+        updateRecurring: async (id, r) => {
+          const res = await run(() =>
+            api<{ recurring: RecurringRule[]; transactions: Transaction[] }>(`/recurring/${id}`, 'PATCH', { ...r, today: today() }),
+          )
+          if (res) set((s) => ({ recurring: res.recurring, transactions: [...res.transactions, ...s.transactions] }))
+        },
+        deleteRecurring: async (id) => {
+          const prev = get().recurring
+          set({ recurring: prev.filter((r) => r.id !== id) })
+          await run(() => api(`/recurring/${id}`, 'DELETE'), () => set({ recurring: prev }))
+        },
+        syncRecurring: async () => {
+          if (get().status !== 'ready') return 0
+          const res = await run(() =>
+            api<{ transactions: Transaction[]; recurring?: RecurringRule[] }>('/recurring/sync', 'POST', { today: today() }),
+          )
+          if (!res?.transactions.length) return 0
+          set((s) => ({ transactions: [...res.transactions, ...s.transactions], recurring: res.recurring ?? s.recurring }))
           return res.transactions.length
         },
 
