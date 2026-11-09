@@ -62,6 +62,7 @@ export function Layout() {
           <div className="hidden md:block">
             <ThemeToggle withLabel />
           </div>
+          <UserMenu />
         </div>
       </aside>
 
@@ -83,6 +84,30 @@ function Brand() {
         <Icon name="wallet" />
       </span>
       Finance
+    </div>
+  )
+}
+
+function UserMenu() {
+  const user = useFinanceStore((s) => s.user)
+  const logout = useFinanceStore((s) => s.logout)
+  if (!user) return null
+  return (
+    <div className="mt-1 flex items-center gap-2 px-3 py-2">
+      <span className="grid size-8 shrink-0 place-items-center rounded-full bg-stone-200 text-xs font-semibold uppercase dark:bg-stone-700">
+        {user.name.slice(0, 1)}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{user.name}</p>
+        <p className="truncate text-xs text-stone-500 dark:text-stone-400">{user.email}</p>
+      </div>
+      <button
+        type="button"
+        onClick={logout}
+        className="rounded-md px-2 py-1 text-xs font-medium text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
+      >
+        Sign out
+      </button>
     </div>
   )
 }
