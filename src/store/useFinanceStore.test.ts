@@ -33,7 +33,7 @@ beforeEach(() => {
       return json(res.status, res.body)
     }),
   )
-  useFinanceStore.setState({ status: 'loading', user: null, transactions: [], recurring: [], error: null })
+  useFinanceStore.setState({ status: 'loading', user: null, transactions: [], budgets: [], recurring: [], error: null })
 })
 
 afterEach(() => {
