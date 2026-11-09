@@ -1,16 +1,21 @@
-## Hi there 👋
+# Personal Finance Dashboard
 
-<!--
-**bharat55441/bharat55441** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+A personal finance tracker with user accounts. This repository is the frontend: React 19, TypeScript, Vite, Zustand, Recharts, Tailwind CSS v4, React Router, PapaParse and date-fns.
 
-Here are some ideas to get you started:
+The backend is a separate project, **pfd-api** (Node.js, Express 5, MongoDB).
 
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+## Running locally
+
+```bash
+npm install
+npm run dev      # http://localhost:5173 (proxies /api to http://localhost:4000)
+```
+
+## Scripts
+
+```bash
+npm run dev       # dev server
+npm run build     # typecheck + production build
+npm test          # Vitest unit tests
+npm run lint      # oxlint
+```
