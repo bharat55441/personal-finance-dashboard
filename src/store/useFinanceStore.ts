@@ -2,6 +2,7 @@ import { format } from 'date-fns'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { api, ApiError } from '../api/client'
+import type { Budget } from '../types/Budget'
 import type { RecurringInput, RecurringRule, Transaction, TransactionInput } from '../types/Transaction'
 import type { User } from '../types/User'
 
@@ -10,6 +11,7 @@ export type Status = 'loading' | 'anonymous' | 'ready'
 
 interface FinanceData {
   transactions: Transaction[]
+  budgets: Budget[]
   recurring: RecurringRule[]
 }
 
@@ -31,6 +33,9 @@ interface FinanceState extends FinanceData {
   deleteTransaction: (id: string) => Promise<void>
   importTransactions: (ts: TransactionInput[]) => Promise<number>
 
+  setBudget: (category: string, limit: number) => Promise<void>
+  deleteBudget: (id: string) => Promise<void>
+
   addRecurring: (r: RecurringInput) => Promise<void>
   updateRecurring: (id: string, r: Partial<RecurringInput>) => Promise<void>
   deleteRecurring: (id: string) => Promise<void>
@@ -43,7 +48,7 @@ interface FinanceState extends FinanceData {
   dismissError: () => void
 }
 
-const empty: FinanceData = { transactions: [], recurring: [] }
+const empty: FinanceData = { transactions: [], budgets: [], recurring: [] }
 
 /** The user's local date, so the server generates recurring items in the right month. */
 const today = () => format(new Date(), 'yyyy-MM-dd')
@@ -126,6 +131,19 @@ export const useFinanceStore = create<FinanceState>()(
           if (!res) return 0
           set((s) => ({ transactions: [...res.transactions, ...s.transactions] }))
           return res.transactions.length
+        },
+
+        setBudget: async (category, limit) => {
+          const res = await run(() => api<{ budget: Budget }>(`/budgets/${encodeURIComponent(category)}`, 'PUT', { limit }))
+          if (!res) return
+          set((s) => ({
+            budgets: s.budgets.some((b) => b.id === res.budget.id) ? byId(s.budgets, res.budget) : [...s.budgets, res.budget],
+          }))
+        },
+        deleteBudget: async (id) => {
+          const prev = get().budgets
+          set({ budgets: prev.filter((b) => b.id !== id) })
+          await run(() => api(`/budgets/${id}`, 'DELETE'), () => set({ budgets: prev }))
         },
 
         addRecurring: async (r) => {
