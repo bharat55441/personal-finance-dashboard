@@ -5,6 +5,7 @@ import { cx, Icon, type IconName } from './ui'
 
 const NAV: { to: string; label: string; icon: IconName }[] = [
   { to: '/transactions', label: 'Transactions', icon: 'list' },
+  { to: '/recurring', label: 'Recurring', icon: 'repeat' },
   { to: '/settings', label: 'Settings', icon: 'settings' },
 ]
 
