@@ -5,6 +5,7 @@ import { Button, Card, CardHeader, Icon, inputBase } from '../components/ui'
 import { useFinanceStore } from '../store/useFinanceStore'
 import { downloadFile, parseTransactionsCSV, transactionsToCSV } from '../utils/csv'
 import { CURRENCIES } from '../utils/formatCurrency'
+import { buildSampleData } from '../utils/sampleData'
 
 export function Settings() {
   const transactions = useFinanceStore((s) => s.transactions)
@@ -13,6 +14,7 @@ export function Settings() {
   const toggleTheme = useFinanceStore((s) => s.toggleTheme)
   const setCurrency = useFinanceStore((s) => s.setCurrency)
   const importTransactions = useFinanceStore((s) => s.importTransactions)
+  const importData = useFinanceStore((s) => s.importData)
   const clearAll = useFinanceStore((s) => s.clearAll)
   const user = useFinanceStore((s) => s.user)
 
@@ -106,6 +108,15 @@ export function Settings() {
         <Card className="lg:col-span-2">
           <CardHeader title="Data" subtitle={`Stored on the server in ${user?.email ?? 'your'} account.`} />
           <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              disabled={busy}
+              onClick={() => {
+                if (!transactions.length || confirm('Replace all current data with sample data?')) run(() => importData(buildSampleData(), true))
+              }}
+            >
+              Load sample data
+            </Button>
             <Button
               variant="danger"
               disabled={busy}

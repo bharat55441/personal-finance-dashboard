@@ -1,5 +1,5 @@
 import { lazy, useEffect } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
+import { BrowserRouter, Route, Routes } from 'react-router'
 import { ErrorToast } from './components/ErrorToast'
 import { Layout } from './components/Layout'
 import { useRecurringSync } from './hooks/useRecurringSync'
@@ -7,7 +7,8 @@ import { useApplyTheme } from './hooks/useTheme'
 import { Login } from './pages/Login'
 import { useFinanceStore } from './store/useFinanceStore'
 
-// Route-level code splitting: each page is loaded on demand.
+// Route-level code splitting keeps Recharts out of the non-dashboard pages.
+const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })))
 const Transactions = lazy(() => import('./pages/Transactions').then((m) => ({ default: m.Transactions })))
 const Recurring = lazy(() => import('./pages/Recurring').then((m) => ({ default: m.Recurring })))
 const Budgets = lazy(() => import('./pages/Budgets').then((m) => ({ default: m.Budgets })))
@@ -33,13 +34,13 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<Layout />}>
-          <Route index element={<Navigate to="/transactions" replace />} />
+          <Route index element={<Dashboard />} />
           <Route path="transactions" element={<Transactions />} />
           <Route path="recurring" element={<Recurring />} />
           <Route path="budgets" element={<Budgets />} />
           <Route path="goals" element={<Goals />} />
           <Route path="settings" element={<Settings />} />
-          <Route path="*" element={<Navigate to="/transactions" replace />} />
+          <Route path="*" element={<Dashboard />} />
         </Route>
       </Routes>
       <ErrorToast />
